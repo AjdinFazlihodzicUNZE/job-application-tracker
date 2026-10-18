@@ -9,7 +9,8 @@ db.exec(`
     position TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'applied',
     date_sent TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )
 `);
 

@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('./db');
-const {z} = require('zod');
+const {z, formatError} = require('zod');
 
 const app = express();
 const PORT = 3000;
@@ -13,6 +13,15 @@ const applicationSchema = z.object({
     date_sent: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date_sent must look like 2026-10-18'),
 });
 
+const statusSchema = z.object({
+    status: z.enum(['applied', 'interview', 'rejected', 'offer']),
+})
+function formatErrors(error){
+    return error.issues.map((issue) => ({
+        field: issue.path.join('.'),
+        message: issue.message,
+    }))
+}
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -56,6 +65,47 @@ app.post('/applications', (req, res) => {
 app.get('/applications', (req, res) => {
   const rows = db.prepare('SELECT * FROM applications').all();
   res.json(rows);
+});
+
+app.patch('/applications/:id', (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: 'id must be a number' });
+  }
+
+  const result = statusSchema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({ error: 'Validation failed', details: formatErrors(result.error) });
+  }
+
+  const update = db
+    .prepare('UPDATE applications SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run(result.data.status, id);
+
+  if (update.changes === 0) {
+    return res.status(404).json({ error: 'Application not found' });
+  }
+
+  const updated = db.prepare('SELECT * FROM applications WHERE id = ?').get(id);
+  res.json(updated);
+});
+
+app.delete('/applications/:id', (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: 'id must be a number' });
+  }
+
+  const deleted = db.prepare('DELETE FROM applications WHERE id = ?').run(id);
+
+  if (deleted.changes === 0) {
+    return res.status(404).json({ error: 'Application not found' });
+  }
+
+  res.status(204).send();
 });
 
 app.listen(PORT, () => {
