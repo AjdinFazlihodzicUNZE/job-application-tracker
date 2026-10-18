@@ -30,11 +30,23 @@ app.post('/applications', (req, res) => {
 
     const { company, position, date_sent } = result.data;
 
-  const insert = db
+
+    const existing = db
+    .prepare('SELECT id FROM applications WHERE LOWER(company) = LOWER(?) AND LOWER(position) = LOWER(?)')
+    .get(company, position);
+
+    if (existing) {
+    return res.status(409).json({
+      error: 'You already applied for this position at this company',
+      existing_id: existing.id,
+    });
+    }
+
+    const insert = db
     .prepare('INSERT INTO applications (company, position, date_sent) VALUES (?, ?, ?)')
     .run(company, position, date_sent);
 
-  const saved = db
+    const saved = db
     .prepare('SELECT * FROM applications WHERE id = ?')
     .get(insert.lastInsertRowid);
 
