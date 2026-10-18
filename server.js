@@ -4,6 +4,11 @@ const {z} = require('zod');
 const { formatErrors } = require('./validation');
 const authRoutes = require('./auth');
 
+if (!process.env.JWT_SECRET) {
+  console.error('JWT_SECRET is missing. Create a .env file (see .env.example).');
+  process.exit(1);
+}
+
 const app = express();
 const PORT = 3000;
 
