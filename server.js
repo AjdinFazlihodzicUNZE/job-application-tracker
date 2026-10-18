@@ -6,6 +6,8 @@ const authRoutes = require('./auth');
 const cookieParser = require('cookie-parser'); 
 const requireAuth = require('./requireAuth');
 const { startJobs } = require('./jobs');
+const { createWeeklyReport } = require('./report');
+
 
 if (!process.env.JWT_SECRET) {
   console.error('JWT_SECRET is missing. Create a .env file (see .env.example).');
@@ -19,7 +21,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(authRoutes);
 app.use('/applications', requireAuth);
-
+app.use('/reports', requireAuth);
 
 const applicationSchema = z.object({
     company: z.string().trim().min(1, 'company is required'),
@@ -122,6 +124,12 @@ app.delete('/applications/:id', (req, res) => {
   }
 
   res.status(204).send();
+});
+
+app.get('/reports/weekly', (req, res) => {
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="weekly-report.pdf"');
+  createWeeklyReport(req.userId, res);
 });
 
 app.listen(PORT, () => {
