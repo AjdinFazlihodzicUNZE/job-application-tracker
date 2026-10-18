@@ -1,12 +1,14 @@
 const express = require('express');
 const db = require('./db');
-const {z, formatError} = require('zod');
+const {z} = require('zod');
+const { formatErrors } = require('./validation');
+const authRoutes = require('./auth');
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-
+app.use(authRoutes);
 const applicationSchema = z.object({
     company: z.string().trim().min(1, 'company is required'),
     position: z.string().trim().min(1, 'position is required'),
@@ -16,12 +18,7 @@ const applicationSchema = z.object({
 const statusSchema = z.object({
     status: z.enum(['applied', 'interview', 'rejected', 'offer']),
 })
-function formatErrors(error){
-    return error.issues.map((issue) => ({
-        field: issue.path.join('.'),
-        message: issue.message,
-    }))
-}
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
