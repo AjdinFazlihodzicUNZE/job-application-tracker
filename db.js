@@ -2,17 +2,8 @@ const Database = require('better-sqlite3');
 
 const db = new Database('tracker.db');
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS applications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    company TEXT NOT NULL,
-    position TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'applied',
-    date_sent TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+db.pragma('foreign_keys = ON');
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,5 +12,20 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )
     `);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS applications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    company TEXT NOT NULL,
+    position TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'applied',
+    date_sent TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
 
 module.exports = db;

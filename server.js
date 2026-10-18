@@ -3,6 +3,8 @@ const db = require('./db');
 const {z} = require('zod');
 const { formatErrors } = require('./validation');
 const authRoutes = require('./auth');
+const cookieParser = require('cookie-parser'); 
+const requireAuth = require('./requireAuth');
 
 if (!process.env.JWT_SECRET) {
   console.error('JWT_SECRET is missing. Create a .env file (see .env.example).');
@@ -13,7 +15,11 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(authRoutes);
+app.use('/applications', requireAuth);
+
+
 const applicationSchema = z.object({
     company: z.string().trim().min(1, 'company is required'),
     position: z.string().trim().min(1, 'position is required'),
@@ -43,8 +49,8 @@ app.post('/applications', (req, res) => {
 
 
     const existing = db
-    .prepare('SELECT id FROM applications WHERE LOWER(company) = LOWER(?) AND LOWER(position) = LOWER(?)')
-    .get(company, position);
+    .prepare('SELECT id FROM applications WHERE user_id = ? AND LOWER(company) = LOWER(?) AND LOWER(position) = LOWER(?)')
+    .get(req.userId,company, position);
 
     if (existing) {
     return res.status(409).json({
@@ -54,8 +60,8 @@ app.post('/applications', (req, res) => {
     }
 
     const insert = db
-    .prepare('INSERT INTO applications (company, position, date_sent) VALUES (?, ?, ?)')
-    .run(company, position, date_sent);
+    .prepare('INSERT INTO applications (user_id, company, position, date_sent) VALUES (?, ?, ?, ?)')
+    .run(req.userId,company, position, date_sent);
 
     const saved = db
     .prepare('SELECT * FROM applications WHERE id = ?')
@@ -65,7 +71,7 @@ app.post('/applications', (req, res) => {
 });
 
 app.get('/applications', (req, res) => {
-  const rows = db.prepare('SELECT * FROM applications').all();
+  const rows = db.prepare('SELECT * FROM applications WHERE user_id = ?').all(req.userId);
   res.json(rows);
 });
 
@@ -83,8 +89,8 @@ app.patch('/applications/:id', (req, res) => {
   }
 
   const update = db
-    .prepare('UPDATE applications SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-    .run(result.data.status, id);
+    .prepare('UPDATE applications SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?')
+    .run(result.data.status, id, req.userId);
 
   if (update.changes === 0) {
     return res.status(404).json({ error: 'Application not found' });
@@ -101,7 +107,7 @@ app.delete('/applications/:id', (req, res) => {
     return res.status(400).json({ error: 'id must be a number' });
   }
 
-  const deleted = db.prepare('DELETE FROM applications WHERE id = ?').run(id);
+  const deleted = db.prepare('DELETE FROM applications WHERE id = ? AND user_id = ?').run(id,req.userId);
 
   if (deleted.changes === 0) {
     return res.status(404).json({ error: 'Application not found' });
