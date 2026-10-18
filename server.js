@@ -5,6 +5,7 @@ const { formatErrors } = require('./validation');
 const authRoutes = require('./auth');
 const cookieParser = require('cookie-parser'); 
 const requireAuth = require('./requireAuth');
+const { startJobs } = require('./jobs');
 
 if (!process.env.JWT_SECRET) {
   console.error('JWT_SECRET is missing. Create a .env file (see .env.example).');
@@ -75,6 +76,13 @@ app.get('/applications', (req, res) => {
   res.json(rows);
 });
 
+app.get('/applications/followups', (req, res) => {
+  const rows = db
+    .prepare('SELECT * FROM applications WHERE user_id = ? AND needs_followup = 1')
+    .all(req.userId);
+  res.json(rows);
+});
+
 app.patch('/applications/:id', (req, res) => {
   const id = Number(req.params.id);
 
@@ -89,7 +97,7 @@ app.patch('/applications/:id', (req, res) => {
   }
 
   const update = db
-    .prepare('UPDATE applications SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?')
+    .prepare('UPDATE applications SET status = ?, needs_followup = 0,updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?')
     .run(result.data.status, id, req.userId);
 
   if (update.changes === 0) {
@@ -118,6 +126,7 @@ app.delete('/applications/:id', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  startJobs();
 });
 
 

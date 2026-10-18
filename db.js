@@ -21,6 +21,7 @@ db.exec(`
     position TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'applied',
     date_sent TEXT NOT NULL,
+    needs_followup INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
